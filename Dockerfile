@@ -1,17 +1,14 @@
-# Use your specified NVIDIA PyTorch base image
-FROM pytorch/pytorch:2.9.0-cuda13.0-cudnn9-devel
+# Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
+FROM vishva123/nvdia-cuda-12.4.1-cudnn-devel-ubuntu22.04-py-3.11-uv
 
 # Set the working directory inside the container
 WORKDIR /workspace
 
-# --- CRITICAL FIX: Set the PATH environment variable ---
-# This ensures that Python, pip, and other executables installed by Conda (from the base image)
-# or pip are correctly found by the shell, especially for SSH sessions.
-# /opt/conda/bin is where 'python' and 'pip' were found.
-ENV PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# Set PATH to include Python 3.11 binaries and CUDA
+# Your base image already has python3.11 at /usr/local/bin
+ENV PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Install common development tools and dependencies
-# Using 'apt-get clean' and 'rm -rf /var/lib/apt/lists/*' for smaller image size
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git \
@@ -21,7 +18,6 @@ RUN apt-get update && \
     vim \
     nano \
     wget \
-    build-essential \
     tmux \
     htop \
     tree \
@@ -31,13 +27,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Generate SSH host keys if they don't exist
-# This is crucial for SSH to start without errors
+# Generate SSH host keys for SSH access
 RUN ssh-keygen -A
 
-# Install JupyterLab, widgets, and other common Python packages
-# Consolidating pip installs to optimize Docker layers
-RUN pip install --no-cache-dir \
+
+# Install JupyterLab and common Python packages
+RUN pip install \
     jupyterlab \
     notebook \
     ipywidgets \
@@ -51,46 +46,27 @@ RUN pip install --no-cache-dir \
     tqdm \
     Pillow \
     opencv-python \
-    transformers \
-    datasets \
-    accelerate \
-    tensorboard \
-    evaluate \
     rich \
     cryptography \
-    bitsandbytes \
+    hf_xet \
     hf_transfer && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
-# Install flash-attn separately due to MAX_JOBS flag and potential build complexity
-# RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
-
-# Configure SSH. This is essential for SSH access.
-# Set a default password for root (CHANGE 'runpod' to a strong password or use SSH keys for production)
+# Configure SSH
 RUN mkdir -p /var/run/sshd && \
     echo 'root:runpod' | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
 
-# --- NEW ADDITION: Ensure PATH is set for interactive SSH sessions ---
-# This appends the conda bin directory to the PATH in .bashrc for the root user.
-# It ensures that python and pip are found when you SSH in.
-RUN echo 'export PATH="/opt/conda/bin:$PATH"' >> /root/.bashrc
+# Ensure PATH is set for SSH sessions
+RUN echo 'export PATH="/opt/venv/bin:/usr/local/bin:$PATH"' >> /root/.bashrc
 
-# Expose ports as per RunPod's readme
+# Expose ports for JupyterLab and SSH
 EXPOSE 8888
 EXPOSE 22
 
-# --- NGINX Configuration (Optional, uncomment if needed) ---
-# If you enable NGINX, ensure you have a 'default_nginx.conf' file
-# in the same directory as your Dockerfile.
-#
-# COPY default_nginx.conf /etc/nginx/sites-available/default
-# RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
-
-# Copy and set up the entrypoint script
-# Ensure entrypoint.sh is in the same directory as your Dockerfile
+# Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
