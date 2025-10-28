@@ -1,5 +1,5 @@
 # Use your specified NVIDIA PyTorch base image
-FROM pytorch/pytorch:2.8.0-cuda12.6-cudnn9-devel
+FROM pytorch/pytorch:2.9.0-cuda13.0-cudnn9-devel
 
 # Set the working directory inside the container
 WORKDIR /workspace
@@ -63,7 +63,7 @@ RUN pip install --no-cache-dir \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Install flash-attn separately due to MAX_JOBS flag and potential build complexity
-RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
+# RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
 
 # Configure SSH. This is essential for SSH access.
 # Set a default password for root (CHANGE 'runpod' to a strong password or use SSH keys for production)
