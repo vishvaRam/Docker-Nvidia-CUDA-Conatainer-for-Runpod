@@ -1,5 +1,5 @@
 # Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
-FROM vishva123/nvdia-cuda-12.6.3-cudnn-devel-ubuntu24.04-py-3.11-uv
+FROM vishva123/nvdia-cuda-12.8.1-cudnn-devel-ubuntu24.04-py-3.11-uv
 
 # Set the working directory inside the container
 WORKDIR /workspace
