@@ -49,7 +49,8 @@ RUN pip install \
     rich \
     cryptography \
     hf_xet \
-    hf_transfer && \
+    hf_transfer \
+    uv && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Configure SSH
