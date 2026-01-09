@@ -1,11 +1,11 @@
 # Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
-FROM vishva123/nvdia-cuda-13.0.1-cudnn-devel-ubuntu24.04-py-3.11-uv
+FROM vishva123/nvidia-cuda-13.0.2-cudnn-devel-ubuntu24.04-python-3.12
 
 # Set the working directory inside the container
 WORKDIR /workspace
 
-# Set PATH to include Python 3.11 binaries and CUDA
-# Your base image already has python3.11 at /usr/local/bin
+# Set PATH to include Python 3.12 binaries and CUDA
+# Your base image already has python3.12 at /usr/local/bin
 ENV PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Install common development tools and dependencies
@@ -49,7 +49,8 @@ RUN pip install \
     rich \
     cryptography \
     hf_xet \
-    hf_transfer && \
+    hf_transfer \  
+    uv && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Configure SSH
