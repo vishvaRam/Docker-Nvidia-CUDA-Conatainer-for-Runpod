@@ -1,11 +1,11 @@
 # Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
-FROM vishva123/nvdia-cuda-12.6.3-cudnn-devel-ubuntu24.04-py-3.11-uv
+FROM vishva123/nvidia-cuda-12.6.3-cudnn-devel-ubuntu24.04-python-3.12
 
 # Set the working directory inside the container
 WORKDIR /workspace
 
-# Set PATH to include Python 3.11 binaries and CUDA
-# Your base image already has python3.11 at /usr/local/bin
+# Set PATH to include Python 3.12 binaries and CUDA
+# Your base image already has python3.12 at /usr/local/bin
 ENV PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # Install common development tools and dependencies
@@ -49,7 +49,8 @@ RUN pip install \
     rich \
     cryptography \
     hf_xet \
-    hf_transfer && \
+    hf_transfer \ 
+    uv && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Configure SSH
@@ -65,6 +66,12 @@ RUN echo 'export PATH="/opt/venv/bin:/usr/local/bin:$PATH"' >> /root/.bashrc
 # Expose ports for JupyterLab and SSH
 EXPOSE 8888
 EXPOSE 22
+
+# Prevent Python from writing .pyc files and enable unbuffered logging
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+# Enable Hugging Face fast transfers
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
