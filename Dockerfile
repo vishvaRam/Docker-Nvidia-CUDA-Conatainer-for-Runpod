@@ -1,5 +1,5 @@
 # Use your specified NVIDIA PyTorch base image
-FROM pytorch/pytorch:2.10.0-cuda12.8-cudnn9-devel
+FROM pytorch/pytorch:2.10.0-cuda13.0-cudnn9-devel
 
 # Set the working directory inside the container
 WORKDIR /workspace
