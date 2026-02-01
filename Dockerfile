@@ -1,5 +1,5 @@
 # Use your specified NVIDIA PyTorch base image
-FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
+FROM pytorch/pytorch:2.10.0-cuda12.6-cudnn9-devel
 
 # Set the working directory inside the container
 WORKDIR /workspace
@@ -37,12 +37,12 @@ RUN ssh-keygen -A
 
 # Install JupyterLab, widgets, and other common Python packages
 # Consolidating pip installs to optimize Docker layers
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --break-system-packages \
     jupyterlab \
     notebook \
     ipywidgets \
     ipykernel \
-    "jupyterlab-widgets>=1.0.0" \
+    jupyterlab-widgets \
     numpy \
     scipy \
     pandas \
@@ -59,11 +59,15 @@ RUN pip install --no-cache-dir \
     rich \
     cryptography \
     bitsandbytes \
+    ninja \
+    packaging \
+    hf_xet \
+    uv \
     hf_transfer && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Install flash-attn separately due to MAX_JOBS flag and potential build complexity
-RUN MAX_JOBS=4 pip install flash-attn --no-build-isolation
+# RUN MAX_JOBS=2 pip install flash-attn --no-build-isolation --break-system-packages
 
 # Configure SSH. This is essential for SSH access.
 # Set a default password for root (CHANGE 'runpod' to a strong password or use SSH keys for production)
@@ -93,6 +97,8 @@ EXPOSE 22
 # Ensure entrypoint.sh is in the same directory as your Dockerfile
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
 
 # Use the entrypoint script to manage services
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
