@@ -67,7 +67,7 @@ RUN pip install --no-cache-dir --break-system-packages \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Install flash-attn separately due to MAX_JOBS flag and potential build complexity
-# RUN MAX_JOBS=2 pip install flash-attn --no-build-isolation --break-system-packages
+RUN MAX_JOBS=2 pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/flash_attn-2.8.3+cu126torch2.10-cp312-cp312-linux_x86_64.whl --no-build-isolation --break-system-packages
 
 # Configure SSH. This is essential for SSH access.
 # Set a default password for root (CHANGE 'runpod' to a strong password or use SSH keys for production)
