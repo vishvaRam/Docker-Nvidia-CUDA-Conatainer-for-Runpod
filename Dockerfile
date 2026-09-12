@@ -1,5 +1,5 @@
-# Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
-FROM vishva123/nvidia-cuda-12.6.3-cudnn-devel-ubuntu24.04-python-3.12
+# Use YOUR custom NVIDIA CUDA base image with Python 3.12 and uv
+FROM vishva123/nvidia-cuda-12.6-cudnn-runtime-ubuntu24.04-python-3.12
 
 # Set the working directory inside the container
 WORKDIR /workspace
@@ -37,7 +37,7 @@ RUN pip install \
     notebook \
     ipywidgets \
     ipykernel \
-    "jupyterlab-widgets>=1.0.0" \
+    jupyterlab-widgets \
     numpy \
     scipy \
     pandas \
@@ -50,6 +50,12 @@ RUN pip install \
     cryptography \
     hf_xet \
     hf_transfer \ 
+    requests \
+    httpx \ 
+    pyyaml \    
+    orjson \    
+    psutil \    
+    packaging \ 
     uv && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
@@ -71,7 +77,7 @@ EXPOSE 22
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 # Enable Hugging Face fast transfers
-ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV HF_XET_HIGH_PERFORMANCE=1
 
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
