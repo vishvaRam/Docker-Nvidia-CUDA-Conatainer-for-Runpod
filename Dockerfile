@@ -1,5 +1,5 @@
 # Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
-FROM vishva123/nvidia-cuda-13.0.2-cudnn-devel-ubuntu24.04-python-3.12
+FROM vishva123/nvdia-cuda-13.0.1-cudnn-devel-ubuntu24.04-py-3.11-uv
 
 # Set the working directory inside the container
 WORKDIR /workspace
@@ -37,7 +37,7 @@ RUN pip install \
     notebook \
     ipywidgets \
     ipykernel \
-    "jupyterlab-widgets>=1.0.0" \
+    jupyterlab-widgets \
     numpy \
     scipy \
     pandas \
@@ -49,8 +49,7 @@ RUN pip install \
     rich \
     cryptography \
     hf_xet \
-    hf_transfer \  
-    uv && \
+    hf_transfer && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Configure SSH
