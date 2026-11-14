@@ -69,6 +69,27 @@ RUN mkdir -p /var/run/sshd && \
 # Ensure PATH is set for SSH sessions
 RUN echo 'export PATH="/opt/venv/bin:/usr/local/bin:$PATH"' >> /root/.bashrc
 
+# Install Runpod Weld
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        jq \
+    && VERSION=$(curl -fsSL \
+        https://api.github.com/repos/kodxana/Runpod-Weld/releases/latest \
+        | jq -r '.tag_name | sub("^v"; "")') \
+    && test -n "$VERSION" \
+    && BASE="https://github.com/kodxana/Runpod-Weld/releases/download/v${VERSION}" \
+    && curl -fL "${BASE}/rpweld_${VERSION}_amd64.deb" \
+        -o "rpweld_${VERSION}_amd64.deb" \
+    && curl -fL "${BASE}/SHA256SUMS" -o SHA256SUMS \
+    && sha256sum -c --ignore-missing SHA256SUMS \
+    && apt-get install -y --no-install-recommends \
+        "./rpweld_${VERSION}_amd64.deb" \
+    && rpweld --version \
+    && rm -f "rpweld_${VERSION}_amd64.deb" SHA256SUMS \
+    && rm -rf /var/lib/apt/lists/*
+
 # Expose ports for JupyterLab and SSH
 EXPOSE 8888
 EXPOSE 22
