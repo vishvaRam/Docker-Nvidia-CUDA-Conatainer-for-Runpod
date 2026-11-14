@@ -1,9 +1,9 @@
 # ============================================================
-# NVIDIA CUDA 13.2 + CUDNN RUNTIME
+# NVIDIA CUDA 13.2 + CUDNN DEVEL
 # RunPod Development Environment
 # ============================================================
 
-FROM vishva123/nvidia-cuda-13.2-cudnn-runtime-ubuntu24.04-python-3.12
+FROM vishva123/nvidia-cuda-13.2-cudnn-devel-ubuntu24.04-python-3.12
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
