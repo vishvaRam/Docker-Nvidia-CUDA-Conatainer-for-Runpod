@@ -259,8 +259,7 @@ echo "--- Starting RunPod File Uploader ---"
 
 if command -v runpod-uploader >/dev/null 2>&1; then
 
-    runpod-uploader \
-        > /workspace/runpod-uploader.log 2>&1 &
+    runpod-uploader > /dev/null 2>&1 &
 
     UPLOADER_PID=$!
 
@@ -272,7 +271,6 @@ if command -v runpod-uploader >/dev/null 2>&1; then
         echo "[INFO] Expected port: 2999"
     else
         echo "[ERROR] File Uploader exited during startup"
-        tail -50 /workspace/runpod-uploader.log || true
     fi
 
 else
