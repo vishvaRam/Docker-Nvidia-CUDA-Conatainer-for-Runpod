@@ -1,4 +1,4 @@
-# Use YOUR custom NVIDIA CUDA base image with Python 3.11 and uv
+# Use YOUR custom NVIDIA CUDA base image with Python 3.12 and uv
 FROM vishva123/nvidia-cuda-13.0-cudnn-runtime-ubuntu24.04-python-3.12
 
 # Set the working directory inside the container
@@ -23,6 +23,7 @@ RUN apt-get update && \
     tree \
     unzip \
     zip \
+    jq \
     rsync && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -49,7 +50,14 @@ RUN pip install \
     rich \
     cryptography \
     hf_xet \
-    hf_transfer && \
+    hf_transfer \ 
+    requests \
+    httpx \ 
+    pyyaml \    
+    orjson \    
+    psutil \    
+    packaging \ 
+    uv && \
     jupyter labextension enable @jupyter-widgets/jupyterlab-manager
 
 # Configure SSH
@@ -63,12 +71,7 @@ RUN mkdir -p /var/run/sshd && \
 RUN echo 'export PATH="/opt/venv/bin:/usr/local/bin:$PATH"' >> /root/.bashrc
 
 # Install Runpod Weld
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        curl \
-        ca-certificates \
-        jq \
-    && VERSION=$(curl -fsSL \
+RUN VERSION=$(curl -fsSL \
         https://api.github.com/repos/kodxana/Runpod-Weld/releases/latest \
         | jq -r '.tag_name | sub("^v"; "")') \
     && test -n "$VERSION" \
