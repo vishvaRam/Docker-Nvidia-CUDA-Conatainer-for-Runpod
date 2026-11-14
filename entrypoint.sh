@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -135,7 +134,6 @@ for module, name in packages.items():
     except Exception as exc:
         print(f"[ERROR] {name}: {exc}")
 
-# PyTorch CUDA diagnostics
 try:
     import torch
 
@@ -185,7 +183,9 @@ echo ""
 echo "[6/7] STARTING SERVICES"
 echo "------------------------------------------------------------"
 
-mkdir -p /var/run/sshd /workspace
+mkdir -p /var/run/sshd /workspace /root/.ssh
+chmod 700 /root/.ssh
+chown root:root /root /root/.ssh
 
 # ------------------------------------------------------------
 # SSH PUBLIC KEY CONFIGURATION (RUNPOD)
@@ -194,24 +194,27 @@ mkdir -p /var/run/sshd /workspace
 echo ""
 echo "--- Configuring RunPod SSH Public Key ---"
 
-mkdir -p /root/.ssh
-chmod 700 /root/.ssh
+touch /root/.ssh/authorized_keys
 
+# RunPod uses RUNPOD_PUBLIC_KEY (and sometimes PUBLIC_KEY)
+COMBINED_KEYS="${RUNPOD_PUBLIC_KEY:-}"
 if [ -n "${PUBLIC_KEY:-}" ]; then
-
-    printf '%s\n' "$PUBLIC_KEY" > /root/.ssh/authorized_keys
-
-    chmod 600 /root/.ssh/authorized_keys
-    chown -R root:root /root/.ssh
-
-    echo "[OK] RunPod SSH public key installed"
-
-else
-
-    echo "[WARNING] PUBLIC_KEY environment variable is empty"
-    echo "[WARNING] SSH public-key authentication may fail"
-
+    COMBINED_KEYS="${COMBINED_KEYS}"$'\n'"${PUBLIC_KEY}"
 fi
+
+if [ -n "${COMBINED_KEYS//[[:space:]]/}" ]; then
+    printf '%s\n' "$COMBINED_KEYS" | awk 'NF' >> /root/.ssh/authorized_keys
+    sort -u /root/.ssh/authorized_keys -o /root/.ssh/authorized_keys
+    echo "[OK] RunPod SSH public key(s) installed ($(wc -l < /root/.ssh/authorized_keys) key(s))"
+else
+    echo "[WARNING] Neither RUNPOD_PUBLIC_KEY nor PUBLIC_KEY is set"
+fi
+
+chmod 600 /root/.ssh/authorized_keys
+chown -R root:root /root/.ssh
+
+# Export container environment variables so SSH sessions inherit them
+env | grep -E '^(RUNPOD_|CUDA|NVIDIA|HF_|PATH=|LD_LIBRARY_PATH=)' > /etc/environment || true
 
 # ------------------------------------------------------------
 # SSH
@@ -222,23 +225,12 @@ echo "--- Starting SSH ---"
 
 ssh-keygen -A
 
+# Allow custom SSH_PASSWORD override, otherwise keep default 'runpod' from Dockerfile
 if [ -n "${SSH_PASSWORD:-}" ]; then
-
     echo "root:${SSH_PASSWORD}" | chpasswd
-
-    cat > /etc/ssh/sshd_config.d/99-runpod.conf <<'EOF'
-PermitRootLogin yes
-PubkeyAuthentication yes
-PasswordAuthentication yes
-UsePAM no
-EOF
-
-    echo "[INFO] SSH password authentication enabled"
-
+    echo "[INFO] Custom SSH_PASSWORD applied"
 else
-
-    echo "[INFO] SSH public-key authentication only"
-
+    echo "[INFO] Default SSH password ('runpod') active alongside public-key auth"
 fi
 
 /usr/sbin/sshd -t

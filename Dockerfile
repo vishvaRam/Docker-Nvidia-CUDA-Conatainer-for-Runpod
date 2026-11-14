@@ -62,13 +62,22 @@ RUN apt-get update && \
 # SSH CONFIGURATION
 # ============================================================
 
-RUN mkdir -p /var/run/sshd /etc/ssh/sshd_config.d && \
+RUN mkdir -p /var/run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
+    chmod 700 /root/.ssh && \
+    ssh-keygen -A && \
+    echo 'root:runpod' | chpasswd && \
+    sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*UsePAM.*/UsePAM no/' /etc/ssh/sshd_config && \
     printf '%s\n' \
-    'PermitRootLogin prohibit-password' \
+    'PermitRootLogin yes' \
     'PubkeyAuthentication yes' \
-    'PasswordAuthentication no' \
+    'PasswordAuthentication yes' \
+    'AuthorizedKeysFile .ssh/authorized_keys' \
     'UsePAM no' \
-    > /etc/ssh/sshd_config.d/99-runpod.conf
+    > /etc/ssh/sshd_config.d/00-runpod.conf && \
+    echo 'export PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"' >> /root/.bashrc
 
 # ============================================================
 # PYTHON DEVELOPMENT ENVIRONMENT
