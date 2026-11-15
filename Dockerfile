@@ -1,5 +1,5 @@
 # ============================================================
-# NVIDIA PYTORCH 2.14 + CUDA 13.2 + CUDNN DEVEL
+# NVIDIA PYTORCH 2.14 + CUDA 12.6 + CUDNN DEVEL
 # RunPod Development Environment
 # ============================================================
 
