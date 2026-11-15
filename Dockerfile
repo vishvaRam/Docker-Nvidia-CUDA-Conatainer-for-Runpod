@@ -114,6 +114,10 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
     sentencepiece \
     protobuf \
     huggingface_hub \
+    transformers \
+    tokenizers \
+    accelerate \
+    datasets \
     uv
 
 # ============================================================
