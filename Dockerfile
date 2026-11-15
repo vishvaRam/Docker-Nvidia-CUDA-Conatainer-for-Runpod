@@ -1,9 +1,9 @@
 # ============================================================
-# NVIDIA PYTORCH 2.13 + CUDA 13.2 + CUDNN DEVEL
+# NVIDIA PYTORCH 2.13 + CUDA 13.0 + CUDNN DEVEL
 # RunPod Development Environment
 # ============================================================
 
-FROM pytorch/pytorch:2.13.0-cuda13.2-cudnn9-devel
+FROM pytorch/pytorch:2.13.0-cuda13.0-cudnn9-devel
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -121,7 +121,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 # ============================================================
 
 RUN MAX_JOBS=2 pip install \
-    https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.47/flash_attn-2.8.3+cu132torch2.13-cp312-cp312-linux_x86_64.whl \
+    https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.47/flash_attn-2.8.3+cu130torch2.13-cp312-cp312-linux_x86_64.whl \
     --no-build-isolation
 
 # ============================================================
