@@ -1,43 +1,86 @@
-# Use your specified NVIDIA PyTorch base image
-FROM pytorch/pytorch:2.14.0-cuda13.2-cudnn9-devel
+# ============================================================
+# NVIDIA PYTORCH 2.14 + CUDA 13.2 + CUDNN DEVEL
+# RunPod Development Environment
+# ============================================================
 
-# Set the working directory inside the container
+FROM pytorch/pytorch:2.14.1-cuda13.2-cudnn9-devel
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
+    PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH" \
+    HF_HOME="/workspace/.cache/huggingface" \
+    HF_XET_HIGH_PERFORMANCE=1 \
+    HF_HUB_ENABLE_HF_TRANSFER=1
+
 WORKDIR /workspace
 
-# --- CRITICAL FIX: Set the PATH environment variable ---
-# This ensures that Python, pip, and other executables installed by Conda (from the base image)
-# or pip are correctly found by the shell, especially for SSH sessions.
-# /opt/conda/bin is where 'python' and 'pip' were found.
-ENV PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# ============================================================
+# SYSTEM DEPENDENCIES
+# ============================================================
 
-# Install common development tools and dependencies
-# Using 'apt-get clean' and 'rm -rf /var/lib/apt/lists/*' for smaller image size
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git \
     openssh-server \
     nginx \
     curl \
+    wget \
+    ca-certificates \
     vim \
     nano \
-    wget \
-    build-essential \
     tmux \
     htop \
     tree \
     unzip \
     zip \
-    rsync && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    jq \
+    rsync \
+    procps \
+    iproute2 \
+    dnsutils \
+    lsof \
+    file \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgomp1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Generate SSH host keys if they don't exist
-# This is crucial for SSH to start without errors
-RUN ssh-keygen -A
+# ============================================================
+# SSH CONFIGURATION
+# ============================================================
 
-# Install JupyterLab, widgets, and other common Python packages
-# Consolidating pip installs to optimize Docker layers
-RUN pip install --no-cache-dir --break-system-packages \
+RUN mkdir -p /var/run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
+    chmod 700 /root/.ssh && \
+    ssh-keygen -A && \
+    echo 'root:runpod' | chpasswd && \
+    sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#*UsePAM.*/UsePAM no/' /etc/ssh/sshd_config && \
+    printf '%s\n' \
+    'PermitRootLogin yes' \
+    'PubkeyAuthentication yes' \
+    'PasswordAuthentication yes' \
+    'AuthorizedKeysFile .ssh/authorized_keys' \
+    'UsePAM no' \
+    > /etc/ssh/sshd_config.d/00-runpod.conf && \
+    echo 'export PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"' >> /root/.bashrc
+
+# ============================================================
+# PYTHON DEVELOPMENT ENVIRONMENT
+# ============================================================
+
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    python -m pip install \
     jupyterlab \
     notebook \
     ipywidgets \
@@ -51,54 +94,82 @@ RUN pip install --no-cache-dir --break-system-packages \
     tqdm \
     Pillow \
     opencv-python \
-    transformers \
-    datasets \
-    accelerate \
-    tensorboard \
-    evaluate \
     rich \
     cryptography \
-    bitsandbytes \
-    ninja \
-    packaging \
     hf_xet \
-    uv \
-    hf_transfer && \
-    jupyter labextension enable @jupyter-widgets/jupyterlab-manager
+    hf_transfer \
+    requests \
+    httpx \
+    aiohttp \
+    aiofiles \
+    websockets \
+    fastapi \
+    "uvicorn[standard]" \
+    python-multipart \
+    pyyaml \
+    orjson \
+    psutil \
+    packaging \
+    safetensors \
+    sentencepiece \
+    protobuf \
+    huggingface_hub \
+    uv
 
-# Install flash-attn separately due to MAX_JOBS flag and potential build complexity
-RUN MAX_JOBS=2 pip install https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.10.0/flash_attn-2.8.3+cu132torch2.14-cp312-cp312-linux_x86_64.whl --no-build-isolation --break-system-packages
+# ============================================================
+# INSTALL FLASH-ATTN
+# ============================================================
 
-# Configure SSH. This is essential for SSH access.
-# Set a default password for root (CHANGE 'runpod' to a strong password or use SSH keys for production)
-RUN mkdir -p /var/run/sshd && \
-    echo 'root:runpod' | chpasswd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
+RUN MAX_JOBS=2 pip install \
+    https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.10.0/flash_attn-2.8.3+cu132torch2.14-cp312-cp312-linux_x86_64.whl \
+    --no-build-isolation
 
-# --- NEW ADDITION: Ensure PATH is set for interactive SSH sessions ---
-# This appends the conda bin directory to the PATH in .bashrc for the root user.
-# It ensures that python and pip are found when you SSH in.
-RUN echo 'export PATH="/opt/conda/bin:$PATH"' >> /root/.bashrc
+# ============================================================
+# INSTALL RUNPOD WELD
+# ============================================================
 
-# Expose ports as per RunPod's readme
-EXPOSE 8888
-EXPOSE 22
+RUN VERSION=$(curl -fsSL \
+        https://api.github.com/repos/kodxana/Runpod-Weld/releases/latest \
+        | jq -r '.tag_name | sub("^v"; "")') \
+    && test -n "$VERSION" \
+    && BASE="https://github.com/kodxana/Runpod-Weld/releases/download/v${VERSION}" \
+    && curl -fL "${BASE}/rpweld_${VERSION}_amd64.deb" \
+        -o "/tmp/rpweld_${VERSION}_amd64.deb" \
+    && curl -fL "${BASE}/SHA256SUMS" \
+        -o /tmp/SHA256SUMS \
+    && cd /tmp \
+    && sha256sum -c --ignore-missing SHA256SUMS \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        "./rpweld_${VERSION}_amd64.deb" \
+    && rpweld --version \
+    && rm -f "/tmp/rpweld_${VERSION}_amd64.deb" \
+        /tmp/SHA256SUMS \
+    && rm -rf /var/lib/apt/lists/*
 
-# --- NGINX Configuration (Optional, uncomment if needed) ---
-# If you enable NGINX, ensure you have a 'default_nginx.conf' file
-# in the same directory as your Dockerfile.
-#
-# COPY default_nginx.conf /etc/nginx/sites-available/default
-# RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+# ============================================================
+# INSTALL RUNPOD FILE UPLOADER
+# ============================================================
 
-# Copy and set up the entrypoint script
-# Ensure entrypoint.sh is in the same directory as your Dockerfile
+RUN curl -fsSL \
+    https://github.com/kodxana/RunPod-FilleUploader/raw/main/scripts/installer.sh \
+    -o /tmp/runpod-uploader-installer.sh \
+    && chmod +x /tmp/runpod-uploader-installer.sh \
+    && /bin/bash /tmp/runpod-uploader-installer.sh \
+    && command -v runpod-uploader \
+    && rm -f /tmp/runpod-uploader-installer.sh
+
+# ============================================================
+# EXPOSE RUNPOD PORTS
+# ============================================================
+
+EXPOSE 22 80 8888 2999
+
+# ============================================================
+# ENTRYPOINT
+# ============================================================
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENV HF_HUB_ENABLE_HF_TRANSFER=1
-
-# Use the entrypoint script to manage services
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "/usr/local/bin/entrypoint.sh"]
