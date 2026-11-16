@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 echo ""
 echo "============================================================"
-echo "       NVIDIA CUDA RUNPOD CONTAINER STARTUP"
+echo "        NVIDIA CUDA RUNPOD CONTAINER STARTUP"
 echo "============================================================"
 
 # ============================================================
@@ -79,6 +79,7 @@ packages = {
     "torch": "PyTorch",
     "torchvision": "TorchVision",
     "torchaudio": "TorchAudio",
+    "flash_attn": "Flash-Attention",
     "transformers": "Transformers",
     "tokenizers": "Tokenizers",
     "accelerate": "Accelerate",
@@ -196,7 +197,6 @@ echo "--- Configuring RunPod SSH Public Key ---"
 
 touch /root/.ssh/authorized_keys
 
-# RunPod uses RUNPOD_PUBLIC_KEY (and sometimes PUBLIC_KEY)
 COMBINED_KEYS="${RUNPOD_PUBLIC_KEY:-}"
 if [ -n "${PUBLIC_KEY:-}" ]; then
     COMBINED_KEYS="${COMBINED_KEYS}"$'\n'"${PUBLIC_KEY}"
@@ -213,8 +213,9 @@ fi
 chmod 600 /root/.ssh/authorized_keys
 chown -R root:root /root/.ssh
 
-# Export container environment variables so SSH sessions inherit them
-env | grep -E '^(RUNPOD_|CUDA|NVIDIA|HF_|PATH=|LD_LIBRARY_PATH=)' > /etc/environment || true
+# Safely export container environment variables for SSH sessions
+export -p | grep -E '^declare -x (RUNPOD_|CUDA|NVIDIA|HF_|LD_LIBRARY_PATH)' > /etc/profile.d/runpod.sh || true
+chmod 644 /etc/profile.d/runpod.sh
 
 # ------------------------------------------------------------
 # SSH
@@ -225,7 +226,6 @@ echo "--- Starting SSH ---"
 
 ssh-keygen -A
 
-# Allow custom SSH_PASSWORD override, otherwise keep default 'runpod' from Dockerfile
 if [ -n "${SSH_PASSWORD:-}" ]; then
     echo "root:${SSH_PASSWORD}" | chpasswd
     echo "[INFO] Custom SSH_PASSWORD applied"
@@ -258,11 +258,8 @@ echo ""
 echo "--- Starting RunPod File Uploader ---"
 
 if command -v runpod-uploader >/dev/null 2>&1; then
-
     runpod-uploader > /dev/null 2>&1 &
-
     UPLOADER_PID=$!
-
     sleep 2
 
     if kill -0 "$UPLOADER_PID" 2>/dev/null; then
@@ -272,11 +269,8 @@ if command -v runpod-uploader >/dev/null 2>&1; then
     else
         echo "[ERROR] File Uploader exited during startup"
     fi
-
 else
-
     echo "[ERROR] runpod-uploader not installed"
-
 fi
 
 # ------------------------------------------------------------
@@ -294,7 +288,7 @@ ss -lntp || true
 
 echo ""
 echo "============================================================"
-echo "             STARTING JUPYTER LAB"
+echo "              STARTING JUPYTER LAB"
 echo "============================================================"
 
 echo "[INFO] Workspace: /workspace"

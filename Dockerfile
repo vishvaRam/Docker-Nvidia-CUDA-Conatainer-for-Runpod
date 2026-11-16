@@ -1,9 +1,9 @@
 # ============================================================
-# NVIDIA CUDA 12.6 + CUDNN DEVEL
+# NVIDIA CUDA 12.6 + CUDNN RUNTIME
 # RunPod Development Environment
 # ============================================================
 
-FROM vishva123/nvidia-cuda-12.6-cudnn-devel-ubuntu24.04-python-3.12
+FROM vishva123/nvidia-cuda-12.6-cudnn-runtime-ubuntu24.04-python-3.12
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -18,7 +18,6 @@ ENV PIP_NO_CACHE_DIR=1
 WORKDIR /workspace
 
 ENV PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
-
 ENV HF_HOME="/workspace/.cache/huggingface"
 ENV HF_XET_HIGH_PERFORMANCE=1
 
@@ -77,7 +76,8 @@ RUN mkdir -p /var/run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
     'AuthorizedKeysFile .ssh/authorized_keys' \
     'UsePAM no' \
     > /etc/ssh/sshd_config.d/00-runpod.conf && \
-    echo 'export PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"' >> /root/.bashrc
+    echo 'export PATH="/opt/venv/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"' >> /root/.bashrc && \
+    echo '[ -f /etc/profile.d/runpod.sh ] && source /etc/profile.d/runpod.sh' >> /root/.bashrc
 
 # ============================================================
 # PYTHON DEVELOPMENT ENVIRONMENT
@@ -156,16 +156,6 @@ RUN curl -fsSL \
     && rm -f /tmp/runpod-uploader-installer.sh
 
 # ============================================================
-# WORKSPACE AND STARTUP CONFIGURATION
-# ============================================================
-
-RUN mkdir -p \
-    /workspace \
-    /workspace/.cache/huggingface \
-    /var/log \
-    /var/run/sshd
-
-# ============================================================
 # VERIFY INSTALLED COMMANDS
 # ============================================================
 
@@ -181,10 +171,7 @@ RUN python --version \
 # EXPOSE RUNPOD PORTS
 # ============================================================
 
-EXPOSE 22
-EXPOSE 80
-EXPOSE 8888
-EXPOSE 2999
+EXPOSE 22 80 8888 2999
 
 # ============================================================
 # ENTRYPOINT
