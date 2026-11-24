@@ -1,9 +1,9 @@
 # ============================================================
-# NVIDIA PYTORCH 2.10 + CUDA 12.6 + CUDNN DEVEL
+# UBUNTU 26.04 CPU DEVELOPMENT ENVIRONMENT (NO PYTORCH)
 # RunPod Development Environment
 # ============================================================
 
-FROM pytorch/pytorch:2.10.0-cuda12.6-cudnn9-devel
+FROM ubuntu:26.04
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_BREAK_SYSTEM_PACKAGES=1 \
-    PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH" \
+    PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH" \
     HF_HOME="/workspace/.cache/huggingface" \
     HF_XET_HIGH_PERFORMANCE=1 \
     HF_HUB_ENABLE_HF_TRANSFER=1
@@ -19,11 +19,16 @@ ENV DEBIAN_FRONTEND=noninteractive \
 WORKDIR /workspace
 
 # ============================================================
-# SYSTEM DEPENDENCIES
+# SYSTEM DEPENDENCIES & PYTHON
 # ============================================================
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    python-is-python3 \
     git \
     openssh-server \
     nginx \
@@ -73,13 +78,13 @@ RUN mkdir -p /var/run/sshd /root/.ssh /etc/ssh/sshd_config.d && \
     'AuthorizedKeysFile .ssh/authorized_keys' \
     'UsePAM no' \
     > /etc/ssh/sshd_config.d/00-runpod.conf && \
-    echo 'export PATH="/opt/conda/bin:/usr/local/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:$PATH"' >> /root/.bashrc
+    echo 'export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"' >> /root/.bashrc
 
 # ============================================================
-# PYTHON DEVELOPMENT ENVIRONMENT
+# PYTHON DEVELOPMENT ENVIRONMENT (NO PYTORCH)
 # ============================================================
 
-RUN python -m pip install --upgrade pip setuptools wheel && \
+RUN python -m pip install --upgrade pip setuptools wheel --ignore-installed && \
     python -m pip install \
     jupyterlab \
     notebook \
@@ -93,7 +98,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
     matplotlib \
     tqdm \
     Pillow \
-    opencv-python \
+    opencv-python-headless \
     rich \
     cryptography \
     hf_xet \
@@ -116,17 +121,8 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
     huggingface_hub \
     transformers \
     tokenizers \
-    accelerate \
     datasets \
     uv
-
-# ============================================================
-# INSTALL FLASH-ATTN
-# ============================================================
-
-RUN MAX_JOBS=2 pip install \
-    https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.9.0/flash_attn-2.8.3+cu126torch2.10-cp312-cp312-linux_x86_64.whl \
-    --no-build-isolation
 
 # ============================================================
 # INSTALL RUNPOD WELD

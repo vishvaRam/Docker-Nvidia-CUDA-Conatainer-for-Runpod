@@ -3,60 +3,29 @@ set -Eeuo pipefail
 
 echo ""
 echo "============================================================"
-echo "       NVIDIA CUDA RUNPOD CONTAINER STARTUP"
+echo "       UBUNTU 26.04 CPU RUNPOD CONTAINER STARTUP"
 echo "============================================================"
 
 # ============================================================
-# 1. GPU INFORMATION
+# 1. SYSTEM & CPU INFORMATION
 # ============================================================
 
 echo ""
-echo "[1/7] NVIDIA GPU INFORMATION"
+echo "[1/6] SYSTEM & CPU INFORMATION"
 echo "------------------------------------------------------------"
 
-if command -v nvidia-smi >/dev/null 2>&1; then
-    nvidia-smi
-else
-    echo "[WARNING] nvidia-smi unavailable"
+uname -a
+if command -v lscpu >/dev/null 2>&1; then
+    lscpu | grep -E 'Model name|Socket|Thread|NUMA|CPU\(s\)' || true
 fi
+free -h || true
 
 # ============================================================
-# 2. CUDA INFORMATION
+# 2. PYTHON INFORMATION
 # ============================================================
 
 echo ""
-echo "[2/7] CUDA INFORMATION"
-echo "------------------------------------------------------------"
-
-if command -v nvcc >/dev/null 2>&1; then
-    nvcc --version
-else
-    echo "[INFO] nvcc unavailable (runtime image)"
-fi
-
-if [ -f /usr/local/cuda/version.json ]; then
-    cat /usr/local/cuda/version.json
-elif [ -f /usr/local/cuda/version.txt ]; then
-    cat /usr/local/cuda/version.txt
-fi
-
-echo ""
-echo "--- CUDA Libraries ---"
-
-for lib in libcudart.so libcublas.so libcudnn.so; do
-    if ldconfig -p 2>/dev/null | grep -q "$lib"; then
-        echo "[OK] $lib available"
-    else
-        echo "[INFO] $lib not found in ldconfig cache"
-    fi
-done
-
-# ============================================================
-# 3. PYTHON INFORMATION
-# ============================================================
-
-echo ""
-echo "[3/7] PYTHON INFORMATION"
+echo "[2/6] PYTHON INFORMATION"
 echo "------------------------------------------------------------"
 
 python --version
@@ -64,11 +33,11 @@ pip --version
 uv --version || true
 
 # ============================================================
-# 4. PYTHON PACKAGE DIAGNOSTICS
+# 3. PYTHON PACKAGE DIAGNOSTICS
 # ============================================================
 
 echo ""
-echo "[4/7] PYTHON PACKAGE AVAILABILITY"
+echo "[3/6] PYTHON PACKAGE AVAILABILITY"
 echo "------------------------------------------------------------"
 
 python - <<'PY'
@@ -76,14 +45,9 @@ import importlib.util
 import importlib.metadata as metadata
 
 packages = {
-    "torch": "PyTorch",
-    "torchvision": "TorchVision",
-    "torchaudio": "TorchAudio",
-    "flash_attn": "Flash-Attention",
     "transformers": "Transformers",
     "tokenizers": "Tokenizers",
     "accelerate": "Accelerate",
-    "triton": "Triton",
     "numpy": "NumPy",
     "scipy": "SciPy",
     "pandas": "Pandas",
@@ -108,7 +72,7 @@ packages = {
 }
 
 distribution_names = {
-    "cv2": "opencv-python",
+    "cv2": "opencv-python-headless",
     "sklearn": "scikit-learn",
     "PIL": "Pillow",
     "yaml": "PyYAML",
@@ -134,35 +98,14 @@ for module, name in packages.items():
 
     except Exception as exc:
         print(f"[ERROR] {name}: {exc}")
-
-try:
-    import torch
-
-    print("\n--- PyTorch CUDA Diagnostics ---")
-    print("PyTorch:", torch.__version__)
-    print("CUDA compiled version:", torch.version.cuda)
-    print("CUDA available:", torch.cuda.is_available())
-
-    if torch.cuda.is_available():
-        print("GPU count:", torch.cuda.device_count())
-
-        for i in range(torch.cuda.device_count()):
-            print("GPU:", torch.cuda.get_device_name(i))
-            print("Capability:", torch.cuda.get_device_capability(i))
-
-        print("cuDNN:", torch.backends.cudnn.version())
-
-except ImportError:
-    print("[INFO] PyTorch not installed")
-
 PY
 
 # ============================================================
-# 5. SYSTEM TOOLS
+# 4. SYSTEM TOOLS
 # ============================================================
 
 echo ""
-echo "[5/7] SYSTEM TOOLS"
+echo "[4/6] SYSTEM TOOLS"
 echo "------------------------------------------------------------"
 
 for cmd in \
@@ -177,11 +120,11 @@ for cmd in \
 done
 
 # ============================================================
-# 6. START SERVICES
+# 5. START SERVICES
 # ============================================================
 
 echo ""
-echo "[6/7] STARTING SERVICES"
+echo "[5/6] STARTING SERVICES"
 echo "------------------------------------------------------------"
 
 mkdir -p /var/run/sshd /workspace /root/.ssh
@@ -215,7 +158,7 @@ chmod 600 /root/.ssh/authorized_keys
 chown -R root:root /root/.ssh
 
 # Export container environment variables so SSH sessions inherit them
-env | grep -E '^(RUNPOD_|CUDA|NVIDIA|HF_|PATH=|LD_LIBRARY_PATH=)' > /etc/environment || true
+env | grep -E '^(RUNPOD_|HF_|PATH=)' > /etc/environment || true
 
 # ------------------------------------------------------------
 # SSH
@@ -290,7 +233,7 @@ echo "--- Listening Ports ---"
 ss -lntp || true
 
 # ============================================================
-# 7. START JUPYTER LAB
+# 6. START JUPYTER LAB
 # ============================================================
 
 echo ""
